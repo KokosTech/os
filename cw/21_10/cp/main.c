@@ -11,12 +11,13 @@ int main(int argc, char *argv[]) {
     }
 
     int src = open(argv[1], O_RDONLY);
-    int dest = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
     if (-1 == src) {
         write(2, "file open failed, of file doesn't exist\n", 12);
         exit(1);
     }
+
+    int dest = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
     if (-1 == dest) {
         write(2, "can't open dest file\n", 12);
