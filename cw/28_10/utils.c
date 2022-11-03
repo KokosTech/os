@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include "utils.h"
 
-
-size_t strleny(char *a) { // bytes before \0
+// bytes before \0
+size_t strleny(char *a) { 
     if(!a) return 0;
 
     size_t i = 0;
@@ -13,7 +13,8 @@ size_t strleny(char *a) { // bytes before \0
     return i;
 }
 
-char *strcaty(char *a, char *b) { // a + b and \0
+// a + b and \0
+char *strcaty(char *a, char *b) {
     size_t len_a = strleny(a);
     size_t len_b = strleny(b);
     
@@ -26,30 +27,38 @@ char *strcaty(char *a, char *b) { // a + b and \0
     return res;
 }
 
-void swap(int *a, int *b) { // swap a and b
+// swap a and b
+void swap(int *a, int *b) { 
     *a = *b ^ *a;
     *b = *a ^ *b;
     *a = *a ^ *b;
 }
 
-void swap_void(void *a, void *b, size_t count) { // swap a and  b (no user checks)
-    // skipnah go :)
+// swap a and  b (no user checks)
+void swap_void(void *a, void *b, size_t count) { 
+    char *a_ = (char *)a;
+    char *b_ = (char *)b;
+
+    // could be optimized with a buffer (chunks)
     for(size_t i = 0; i < count; ++i) {
-        ((char *)a)[i] = ((char *)b)[i] ^ ((char *)a)[i];
-        ((char *)b)[i] = ((char *)a)[i] ^ ((char *)b)[i];
-        ((char *)a)[i] = ((char *)a)[i] ^ ((char *)b)[i];
+        a_[i] = b_[i] ^ a_[i];
+        b_[i] = a_[i] ^ b_[i];
+        a_[i] = a_[i] ^ b_[i];
     }
 }
 
-char *strdupy(char *a) { // new mem, copy
+// new mem, copy
+char *strdupy(char *a) { 
     size_t len = strleny(a);
-    char *new_str = (char *)malloc(len * sizeof(char));
+    char *new_str = (char *)malloc(len * sizeof(char) + 1);
 
-    for(size_t i = 0; i < len; ++i) new_str[i] = a[i];
+    for (size_t i = 0; i < len; ++i)
+        new_str[i] = a[i];
     new_str[len] = '\0';
 }
 
-char *readliney(int fd) { // read line from fd and return it, the cursor should be a symbol after the new line
+// read line from fd and return it, the cursor should be a symbol after the new line
+char *readliney(int fd) { 
     char c;
     char *res = (char *)malloc(1 * sizeof(char));
     res[0] = "";
