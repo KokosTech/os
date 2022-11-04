@@ -35,21 +35,41 @@ int main() {
     free(str2);
     free(new_str); */
 
-/*     int fd = open("test.txt", O_RDONLY);
+    int fd = open("test.txt", O_RDONLY);
 
     if (-1 == fd){
         write(2, "file open failed, or file doesn't exist\n", 12);
         exit(1);
-    } */
+    }
 
-    char *str1 = malloc(50);
+/*     char *str1 = malloc(50);
     char *str2 = malloc(50);
 
     str1 = "based\0";
     str2 = "none\0";
 
-    swap_void(str1, str2, 3);
+    swap_void(str1, str2, 3); */
     
 
     //readliney(fd);
+
+    
+    readliney(fd);
+    readliney(fd);
+
+    close(fd);
+
+    fd = open("test.txt", O_RDONLY);
+
+    if (-1 == fd) {
+        write(2, "file open failed, or file doesn't exist\n", 12);
+        exit(1);
+    }
+
+    readliney_optimized(fd);
+    readliney_optimized(fd);
+
+    close(fd);
+
+    return 0;
 }
