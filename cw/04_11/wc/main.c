@@ -11,13 +11,31 @@
 // [2] -l / c
 // [3] -l /-c
 
+off_t seek(int fd, off_t offset, int whence) {
+    if (-1 == fd) {
+        write(2, "[seek] file error\n\0", 19);
+        exit(1);
+    }
+
+    off_t res = lseek(fd, offset, whence);
+
+    if (-1 == res) {
+        write(2, "[seek] seek error\n\0", 18);
+        close(fd);
+        exit(1);
+    }
+
+    return res;
+}
+
 size_t get_lines(int fd) {
     if (-1 == fd) {
         write(2, "[get_lines] file error\n\0", 24);
+        exit(1);
     }
 
-    char c;
     size_t res = 1;
+    char c;
     while (1 == read(fd, &c, 1)) {
         if (c == '\n') ++res;
     }
@@ -30,8 +48,8 @@ size_t get_bytes(int fd) {
         write(2, "[get_lines] file error\n\0", 24);
     }
 
-    size_t res = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
+    size_t res = seek(fd, 0, SEEK_END);
+    seek(fd, 0, SEEK_SET);
 
     return res;
 }

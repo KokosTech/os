@@ -7,33 +7,57 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#define DEFAULT_LINES 10
+
 // [1] filename
-// [2] -l / c
-// [3] -l /-c
+// [2] -n
+// [3] <number>
 
-size_t get_lines(int fd) {
-    if (-1 == fd) {
-        write(2, "[get_lines] file error\n\0", 24);
-    }
-
+char *read_line(int fd) {
     char c;
-    size_t res = 1;
+    char *res = (char *)malloc(1 * sizeof(char));
+    res[0] = '\0';
+
+    size_t len = 0;
     while (1 == read(fd, &c, 1)) {
-        if (c == '\n') ++res;
+        if (c == '\n') {
+            res[len] = '\0';
+            break;
+        }
+        write(1, &c, 1);
+        res[len] = c;
+        ++len;
+        res = (char *)realloc(res, (len + 1) * sizeof(char));
     }
 
     return res;
 }
 
-size_t get_bytes(int fd) {
+int print_lines(int fd, size_t n) {
     if (-1 == fd) {
-        write(2, "[get_lines] file error\n\0", 24);
+        write(2, "[print_lines] file error\n\0", 24);
+        exit(1);
     }
 
-    size_t res = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
+    char *line;
+    for (size_t i = 0; i < n; ++i) {
+        line = read_line(fd);
+        if (line == NULL) {
+            write(2, "[print_lines] line error\n\0", 25);
+            exit(1);
+        }
 
-    return res;
+        if(line[0] == '\0') {
+            free(line);
+            return 0;
+        }
+
+        printf("%s ", line);
+        printf("\n");
+        free(line);
+    }
+
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -50,20 +74,25 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    if (argc > 2) {
-        for (short i = 2; i < 4 && i < argc; ++i) {
-            if (!strcmp("-l", argv[i])) {
-                printf("%zu", get_lines(fd));
-            } else if (!strcmp("-c", argv[i])) {
-                printf("%zu", get_bytes(fd));
-            } else {
-                write(2, "\ninvalid argument, continuing...\n\0", 34);
-            }
-            printf(" ");
-        }
-        printf("\n");
+    if (2 == argc) {
+        print_lines(fd, DEFAULT_LINES);
     } else {
-        printf("%zu %zu\n", get_lines(fd), get_bytes(fd));
+        if (!strcmp("-n", argv[2])) {
+            // get int from argv[3]
+            int n = atoi(argv[3]);
+            if (n < 0) {
+                write(2, "Invalid argument\n\0", 18);
+                close(fd);
+                exit(1);
+            }
+
+            print_lines(fd, n);
+
+        } else {
+            write(2, "Invalid argument\n\0", 18);
+            close(fd);
+            exit(1);
+        }
     }
 
     close(fd);
