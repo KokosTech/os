@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
         } else {
             eclose(fd);
             errx(EINVAL,
-                 "[head] invalid argument - head only expects optinal argument "
+                 "[head] invalid argument - head only expects optinal optional "
                  "-n");
         }
     }

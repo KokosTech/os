@@ -92,8 +92,7 @@ char *readliney_optimized(int fd) {
             break;
         } 
         write(1, &c, 1);
-        res[len] = c;
-        ++len;
+        res[len++] = c;
         res = (char *)realloc(res, (len + 1) * sizeof(char));
     }
 
