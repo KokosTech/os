@@ -1,4 +1,3 @@
-
 #include "utils.h"
 
 #include <err.h>
