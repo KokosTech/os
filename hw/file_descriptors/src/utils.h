@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 // error safe file descriptor functions
