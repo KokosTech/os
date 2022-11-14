@@ -80,6 +80,7 @@ char *read_line(int fd) {
     size_t len = 0;
     while (1 == res_read && c != '\n') {
         res[len++] = c;
+        printf("NNN %s\n", res);
         res = (char *)realloc(res, (len + 1) * sizeof(char));
 
         res_read = read(fd, &c, 1);
@@ -99,11 +100,13 @@ int print_lines(int fd, size_t n) {
     }
 
     char *line = read_line(fd);
-    for (size_t i = 0; line && i < n; ++i) {
+    size_t i = 0;
+    for (; line && i < n; ++i) {
         printf("%s\n", line);
         free(line);
         line = read_line(fd);
     }
+    if (i == n && line) free(line);
 
     return 0;
 }
