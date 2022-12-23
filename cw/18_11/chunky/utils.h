@@ -17,3 +17,4 @@ char *read_line(int fd);
 char *read_line_chunky(int fd);
 
 int print_lines(int fd, size_t n);
+int print_lines_chunky(int fd, size_t n);
