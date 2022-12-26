@@ -1,1 +1,1 @@
-char *get_path(int sfid);
+char *get_path(char *input);
