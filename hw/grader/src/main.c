@@ -2,10 +2,15 @@
 
 #include <err.h>
 #include <errno.h>
-#include <stdio.h>
 
 int main(int argc, char *argv[]) {
-    if (argc < 4) errx(10, "Arguments not provided");
+    if (argc < 4)
+        errx(EINVAL,
+             "Not enough arguments provided.\nPlease use the following "
+             "format:\n./<program_name> <students' answers dir> <correct "
+             "answers file> <results dir>");
+
     grader(argc, argv);
+
     return 0;
 }
