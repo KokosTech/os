@@ -9,25 +9,37 @@
 #include <unistd.h>
 
 #include "main.h"
-#include "utils/file.h"
 
 uint8_t get_points(int sfid, uint8_t *correct_answers) {
     if (-1 == sfid || NULL == correct_answers)
         err(EBADF, "[get_points] file open failed, or file doesn't exist\n");
 
-    size_t ca_size = strlen(correct_answers);
+    size_t ca_size = strlen((char *)correct_answers);
 
     if (0 == ca_size) errx(EINVAL, "[get_points] empty correct answers\n");
 
     size_t points = 0;
-    uint8_t student_answer = NULL;
+    uint8_t student_answer = 0;
 
     for (size_t i = 0; i < ca_size; ++i) {
-        read(sfid, &student_answer, 1);
+        int read_bytes = read(sfid, &student_answer, 1);
+
+        if (-1 == read_bytes) {
+            close(sfid);
+            err(EBADF, "[get_points] read failed\n");
+        }
+
+        if (1 != read_bytes) {
+            close(sfid);
+            errx(EINVAL, "[get_points] invalid file or insufficient data\n");
+        }
 
         if (correct_answers[i] == student_answer) ++points;
 
-        lseek(sfid, 1, SEEK_CUR);
+        if (-1 == lseek(sfid, 1, SEEK_CUR)) {
+            close(sfid);
+            err(EBADF, "[get_points] lseek failed\n");
+        }
     }
 
     return points;
@@ -59,7 +71,7 @@ void write_grade(int rfid, uint8_t points) {
 }
 
 void grade_student(char *path_to_student, char *path_to_result,
-                   char *correct_answers) {
+                   uint8_t *correct_answers) {
     int sfid = open(path_to_student, O_RDONLY);
     if (-1 == sfid)
         err(EBADF, "[grade_student] file open failed, or file doesn't exist\n");
@@ -90,19 +102,31 @@ void grader(int argc, char *argv[]) {
 
     int afid = open(path_to_correct_answers, O_RDONLY);
 
-    if (-1 == afid) {
+    if (-1 == afid)
         err(EBADF, "[grader] file open failed, or file doesn't exist\n");
-    }
 
     uint8_t correct_answers[MAX_QUESTIONS + 1];
 
     char c = 0;
     for (size_t i = 0; i < MAX_QUESTIONS; ++i) {
-        if (1 != read(afid, &c, 1)) err(EBADF, "[grader] read failed\n");
+        int read_bytes = read(afid, &c, 1);
+
+        if (-1 == read_bytes) {
+            close(afid);
+            err(EBADF, "[grader] read failed\n");
+        }
+
+        if (1 != read_bytes) {
+            close(afid);
+            errx(EINVAL, "[grader] invalid file or insufficient data\n");
+        }
 
         correct_answers[i] = c;
 
-        lseek(afid, 1, SEEK_CUR);
+        if (-1 == lseek(afid, 1, SEEK_CUR)) {
+            close(afid);
+            err(EBADF, "[grader] lseek failed\n");
+        }
     }
 
     correct_answers[MAX_QUESTIONS] = '\0';
@@ -110,14 +134,14 @@ void grader(int argc, char *argv[]) {
 
     for (size_t i = 1; i <= MAX_STUDENTS; ++i) {
         if (argv[1][strlen(argv[1])] == '/')
-            sprintf(path_to_student, "%s%zu\0", argv[1], i);
+            sprintf(path_to_student, "%s%zu", argv[1], i);
         else
-            sprintf(path_to_student, "%s/%zu\0", argv[1], i);
+            sprintf(path_to_student, "%s/%zu", argv[1], i);
 
         if (argv[3][strlen(argv[3])] == '/')
-            sprintf(path_to_result, "%s%zu\0", argv[3], i);
+            sprintf(path_to_result, "%s%zu", argv[3], i);
         else
-            sprintf(path_to_result, "%s/%zu\0", argv[3], i);
+            sprintf(path_to_result, "%s/%zu", argv[3], i);
 
         grade_student(path_to_student, path_to_result, correct_answers);
     }
