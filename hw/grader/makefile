@@ -3,9 +3,9 @@ CFLAGS=-Wall -Wextra -pedantic -std=c11
 
 all: static dynamic
 
-obj/utils.o: src/utils/file.c src/utils/file.h
+obj/utils.o: src/utils/path.c src/utils/path.h
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -c src/utils/file.c -o obj/utils.o
+	$(CC) $(CFLAGS) -c src/utils/path.c -o obj/utils.o
 
 obj/dynamic.o:
 	@mkdir -p obj
