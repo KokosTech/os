@@ -152,6 +152,7 @@ void write_grade(char *path_to_result, size_t points) {
 
     if (1 != write(rfid, &grade, 1)) {
         free(path_to_result);
+        close(rfid);
         err(EBADF, "[write_grade] write failed\n");
     }
 
@@ -223,6 +224,7 @@ void grader(int argc, char *argv[]) {
 
         if (1 > sprintf(results_file, "%s%zu", results_dir, i)) {
             free(results_file);
+            free(students_answers_file);
             free(students_answers_dir);
             free(correct_answers);
             free(results_dir);
