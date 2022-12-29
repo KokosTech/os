@@ -9,10 +9,13 @@
 #include <unistd.h>
 
 #include "main.h"
-#include "utils/file.h"
 #include "utils/path.h"
 
 uint8_t *get_correct_answers(char *correct_answers_file) {
+    if (NULL == correct_answers_file)
+        errx(EINVAL,
+             "[get_correct_answers] invalid correct answers filename\n");
+
     int afid = open(correct_answers_file, O_RDONLY);
 
     if (-1 == afid)
@@ -21,12 +24,32 @@ uint8_t *get_correct_answers(char *correct_answers_file) {
 
     uint8_t *correct_answers = malloc(MAX_QUESTIONS + 1);
 
-    if (NULL == correct_answers)
+    if (NULL == correct_answers) {
+        close(afid);
         err(ENOMEM, "[get_correct_answers] malloc failed\n");
+    }
 
     for (size_t i = 0; i < MAX_QUESTIONS; ++i) {
-        read(afid, &correct_answers[i], 1);
-        lseek(afid, 1, SEEK_CUR);
+        int read_bytes = read(afid, &correct_answers[i], 1);
+
+        if (-1 == read_bytes) {
+            close(afid);
+            free(correct_answers);
+            err(EBADF, "[get_correct_answers] read failed\n");
+        }
+
+        if (1 != read_bytes) {
+            close(afid);
+            free(correct_answers);
+            errx(EINVAL,
+                 "[get_correct_answers] invalid file or insufficient data\n");
+        }
+
+        if (-1 == lseek(afid, 1, SEEK_CUR)) {
+            close(afid);
+            free(correct_answers);
+            err(EBADF, "[get_correct_answers] lseek failed\n");
+        }
     }
 
     correct_answers[MAX_QUESTIONS] = '\0';
@@ -36,29 +59,69 @@ uint8_t *get_correct_answers(char *correct_answers_file) {
     return correct_answers;
 }
 
-uint8_t get_points(int sfid, uint8_t *correct_answers) {
-    if (-1 == sfid || NULL == correct_answers)
+size_t get_points(char *students_answers_file, uint8_t *correct_answers) {
+    if (NULL == students_answers_file) {
+        if (NULL != correct_answers) free(correct_answers);
+        errx(EINVAL, "[get_points] invalid students answers filename\n");
+    }
+
+    if (NULL == correct_answers) {
+        if (NULL != students_answers_file) free(students_answers_file);
+        errx(EINVAL, "[get_points] invalid correct answers\n");
+    }
+
+    size_t ca_size = strlen((char *)correct_answers);
+
+    if (0 == ca_size) {
+        free(students_answers_file);
+        free(correct_answers);
+        errx(EINVAL, "[get_points] empty correct answers\n");
+    }
+
+    int sfid = open(students_answers_file, O_RDONLY);
+
+    if (-1 == sfid) {
+        free(students_answers_file);
+        free(correct_answers);
         err(EBADF, "[get_points] file open failed, or file doesn't exist\n");
-
-    size_t ca_size = strlen(correct_answers);
-
-    if (0 == ca_size) errx(EINVAL, "[get_points] empty correct answers\n");
+    }
 
     size_t points = 0;
-    uint8_t student_answer = NULL;
+    uint8_t student_answer = 0;
 
     for (size_t i = 0; i < ca_size; ++i) {
-        read(sfid, &student_answer, 1);
+        int read_bytes = read(sfid, &student_answer, 1);
+
+        if (-1 == read_bytes) {
+            free(students_answers_file);
+            free(correct_answers);
+            close(sfid);
+            err(EBADF, "[get_points] read failed\n");
+        }
+
+        if (1 != read_bytes) {
+            free(students_answers_file);
+            free(correct_answers);
+            close(sfid);
+            errx(EINVAL, "[get_points] invalid file or insufficient data\n");
+        }
 
         if (correct_answers[i] == student_answer) ++points;
 
-        lseek(sfid, 1, SEEK_CUR);
+        if (-1 == lseek(sfid, 1, SEEK_CUR)) {
+            free(students_answers_file);
+            free(correct_answers);
+            close(sfid);
+            err(EBADF, "[get_points] lseek failed\n");
+        }
     }
+
+    close(sfid);
 
     return points;
 }
 
-uint8_t get_grade(uint8_t points) {
+uint8_t get_grade(size_t points) {
     if (points <= MAX_F) {
         return '2';
     } else if (points <= MAX_D) {
@@ -74,34 +137,50 @@ uint8_t get_grade(uint8_t points) {
     }
 }
 
-void write_grade(int rfid, uint8_t points) {
-    if (-1 == rfid)
+void write_grade(char *path_to_result, size_t points) {
+    if (NULL == path_to_result)
+        errx(EINVAL, "[write_grade] invalid result filename\n");
+
+    int rfid = open(path_to_result, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+
+    if (-1 == rfid) {
+        free(path_to_result);
         err(EBADF, "[write_grade] file open failed, or file doesn't exist\n");
+    }
 
     uint8_t grade = get_grade(points);
 
-    if (1 != write(rfid, &grade, 1)) err(EBADF, "[write_grade] write failed\n");
+    if (1 != write(rfid, &grade, 1)) {
+        free(path_to_result);
+        err(EBADF, "[write_grade] write failed\n");
+    }
+
+    close(rfid);
 }
 
 void grade_student(char *path_to_student, char *path_to_result,
-                   char *correct_answers) {
-    int sfid = open(path_to_student, O_RDONLY);
-    if (-1 == sfid)
-        err(EBADF, "[grade_student] file open failed, or file doesn't exist\n");
+                   uint8_t *correct_answers) {
+    if (NULL == path_to_student) {
+        if (NULL != path_to_result) free(path_to_result);
+        if (NULL != correct_answers) free(correct_answers);
+        errx(EINVAL, "[grade_student] invalid student answers filename\n");
+    }
 
-    if (NULL == correct_answers)
-        err(EBADF, "[grade_student] get_correct_answers failed\n");
+    if (NULL == path_to_result) {
+        if (NULL != path_to_student) free(path_to_student);
+        if (NULL != correct_answers) free(correct_answers);
+        errx(EINVAL, "[grade_student] invalid result filename\n");
+    }
 
-    uint8_t points = get_points(sfid, correct_answers);
-    close(sfid);
+    if (NULL == correct_answers) {
+        if (NULL != path_to_student) free(path_to_student);
+        if (NULL != path_to_result) free(path_to_result);
+        errx(EINVAL, "[grade_student] invalid correct answers\n");
+    }
 
-    int rfid = open(path_to_result, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (-1 == rfid)
-        err(EBADF, "[grade_student] file open failed, or file doesn't exist\n");
+    uint8_t points = get_points(path_to_student, correct_answers);
 
-    write_grade(rfid, points);
-
-    close(rfid);
+    write_grade(path_to_result, points);
 }
 
 void grader(int argc, char *argv[]) {
@@ -111,10 +190,52 @@ void grader(int argc, char *argv[]) {
 
     uint8_t *correct_answers = get_correct_answers(correct_answers_file);
 
-    for (size_t i = 0; i < MAX_STUDENTS; ++i) {
-        sprintf(students_answers_dir, "%s%zu\0", argv[1], i);
-        sprintf(results_dir, "%s%zu\0", argv[3], i);
-        grade_student(students_answers_dir, results_dir, correct_answers);
+    for (size_t i = 1; i <= MAX_STUDENTS; ++i) {
+        char *students_answers_file = malloc(
+            (strlen(students_answers_dir) + ((i / 10) + 2)) * sizeof(char));
+
+        if (NULL == students_answers_file) {
+            free(students_answers_dir);
+            free(correct_answers);
+            free(results_dir);
+            errx(ENOMEM, "[grader] malloc failed\n");
+        }
+
+        if (1 >
+            sprintf(students_answers_file, "%s%zu", students_answers_dir, i)) {
+            free(students_answers_file);
+            free(students_answers_dir);
+            free(correct_answers);
+            free(results_dir);
+            errx(EINVAL, "[grader] sprintf failed\n");
+        }
+
+        char *results_file =
+            malloc((strlen(results_dir) + ((i / 10) + 2)) * sizeof(char));
+
+        if (NULL == results_file) {
+            free(students_answers_file);
+            free(students_answers_dir);
+            free(correct_answers);
+            free(results_dir);
+            errx(ENOMEM, "[grader] malloc failed\n");
+        }
+
+        if (1 > sprintf(results_file, "%s%zu", results_dir, i)) {
+            free(results_file);
+            free(students_answers_dir);
+            free(correct_answers);
+            free(results_dir);
+            errx(EINVAL, "[grader] sprintf failed\n");
+        }
+
+
+        printf("Grading student %s\n", students_answers_file);
+        printf("Grading student %s\n", results_file);
+        grade_student(students_answers_file, results_file, correct_answers);
+
+        free(students_answers_file);
+        free(results_file);
     }
 
     free(students_answers_dir);
