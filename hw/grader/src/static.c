@@ -133,16 +133,21 @@ void grader(int argc, char *argv[]) {
     close(afid);
 
     for (size_t i = 1; i <= MAX_STUDENTS; ++i) {
-        if (argv[1][strlen(argv[1])] == '/')
-            sprintf(path_to_student, "%s%zu", argv[1], i);
-        else
-            sprintf(path_to_student, "%s/%zu", argv[1], i);
+        if (argv[1][strlen(argv[1])] == '/') {
+            if (1 > sprintf(path_to_student, "%s%zu", argv[1], i))
+                errx(EINVAL, "[grader] sprintf failed\n");
+        } else {
+            if (1 > sprintf(path_to_student, "%s/%zu", argv[1], i))
+                errx(EINVAL, "[grader] sprintf failed\n");
+        }
 
-        if (argv[3][strlen(argv[3])] == '/')
-            sprintf(path_to_result, "%s%zu", argv[3], i);
-        else
-            sprintf(path_to_result, "%s/%zu", argv[3], i);
-
+        if (argv[3][strlen(argv[3])] == '/') {
+            if (1 > sprintf(path_to_result, "%s%zu", argv[3], i))
+                errx(EINVAL, "[grader] sprintf failed\n");
+        } else {
+            if (1 > sprintf(path_to_result, "%s/%zu", argv[3], i))
+                errx(EINVAL, "[grader] sprintf failed\n");
+        }
         grade_student(path_to_student, path_to_result, correct_answers);
     }
 }
