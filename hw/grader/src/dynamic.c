@@ -11,6 +11,16 @@
 #include "main.h"
 #include "utils/path.h"
 
+uint8_t countDigits(size_t integer) {
+    uint8_t count = 0;
+    while (integer != 0) {
+        ++count;
+        integer /= 10;
+    }
+
+    return count;
+}
+
 uint8_t *get_correct_answers(char *correct_answers_file) {
     if (NULL == correct_answers_file)
         errx(EINVAL,
@@ -193,7 +203,7 @@ void grader(int argc, char *argv[]) {
 
     for (size_t i = 1; i <= MAX_STUDENTS; ++i) {
         char *students_answers_file = malloc(
-            (strlen(students_answers_dir) + ((i / 10) + 2)) * sizeof(char));
+            (strlen(students_answers_dir) + (countDigits(i) + 1)) * sizeof(char));
 
         if (NULL == students_answers_file) {
             free(students_answers_dir);
@@ -212,7 +222,7 @@ void grader(int argc, char *argv[]) {
         }
 
         char *results_file =
-            malloc((strlen(results_dir) + ((i / 10) + 2)) * sizeof(char));
+            malloc((strlen(results_dir) + (countDigits(i) + 1)) * sizeof(char));
 
         if (NULL == results_file) {
             free(students_answers_file);
