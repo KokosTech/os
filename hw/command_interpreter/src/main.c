@@ -1,9 +1,11 @@
+#include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 typedef struct array_t {
@@ -24,6 +26,11 @@ char *readliney_optimized(int fd) {
         // write(1, &c, 1);
         res[len++] = c;
         res = (char *)realloc(res, (len + 1) * sizeof(char));
+    }
+
+    if (len == 0) {
+        free(res);
+        return NULL;
     }
 
     return res;
@@ -51,15 +58,22 @@ array_t *tokenizer(char *str) {
 int run_command(array_t *args) {
     pid_t pid = fork();
 
-    if(pid == 0) {
-        execvp(args->data[0], args->data);
-        //perror("execvp");
+    if (pid == 0) {
+        int exec_stat = execvp(args->data[0], args->data);
+        if (exec_stat == -1) {
+            errx(1, "execvp failed");
+        }
         return 1;
-    } else if(pid > 0) {
-        waitpid(pid, NULL, 0);
+    } else if (pid > 0) {
+        int status;
+        waitpid(pid, &status, 0);
+        WIFEXITED(status);
+        if (WEXITSTATUS(status) != 0) {
+            printf("Command %s failed with status %d :(\n", args->data[0],
+                   WEXITSTATUS(status));
+        }
     } else {
-        perror("fork");
-        return 1;
+        errx(1, "fork failed");
     }
 }
 
@@ -72,18 +86,14 @@ int main(int argc, char *argv[]) {
     int fd = open(argv[1], O_RDONLY);
 
     char *line = readliney_optimized(fd);
-    array_t *tokens = tokenizer(line);
+    while (line != NULL) {
+        printf("LINE: %s\n", line);
 
-    for (int i = 0; tokens->data[i]; ++i) printf("%s\n", tokens->data[i]);
+        char **tokens = tokenizer(line);
+        run_command(tokens);
 
-    run_command(tokens);
-
-    line = readliney_optimized(fd);
-    tokens = tokenizer(line);
-
-    for (int i = 0; tokens->data[i]; ++i) printf("%s\n", tokens->data[i]);
-
-    run_command(tokens);
+        line = readliney_optimized(fd);
+    }
 
     return 0;
 }
