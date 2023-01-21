@@ -5,6 +5,8 @@
         "stdio.h": "c",
         "errno.h": "c",
         "err.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "hashmap.h": "c",
+        "file.h": "c"
     }
 }

@@ -1,0 +1,6 @@
+ls
+ls -a
+neofetch
+true
+false
+df

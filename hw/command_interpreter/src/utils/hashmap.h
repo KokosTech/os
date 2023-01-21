@@ -27,6 +27,7 @@ void *get(hash_table_t *hash_table, char *mem);
 void *remove_pair(hash_table_t *hash_table, char *mem);
 
 void *hmalloc(hash_table_t *hash_table, char *mem, size_t size);
+void *hrealloc(hash_table_t *hash_table, char *mem, size_t size);
 void hfree(hash_table_t *hash_table, char *mem);
 
 hash_table_t *destroy_table(hash_table_t *hash_table);

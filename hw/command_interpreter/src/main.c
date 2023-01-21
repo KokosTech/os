@@ -8,6 +8,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "utils/file.h"
+#include "utils/hashmap.h"
+// #include "utils/pgc.h"
+
+hash_table_t *MEMORY;
+
 typedef struct array_t {
     char **data;
     size_t size;
@@ -15,21 +21,22 @@ typedef struct array_t {
 
 char *readliney_optimized(int fd) {
     char c;
-    char *res = (char *)malloc(1 * sizeof(char));
+    char *res = (char *)hmalloc(MEMORY, "res", 1 * sizeof(char));
 
     size_t len = 0;
-    while (1 == read(fd, &c, 1)) {
+    while (1 == eread(fd, &c, 1)) {
         if (c == '\n') {
             res[len] = '\0';
             break;
         }
-        // write(1, &c, 1);
+
         res[len++] = c;
-        res = (char *)realloc(res, (len + 1) * sizeof(char));
+        res = (char *)hrealloc(MEMORY, "res", (len + 1) * sizeof(char));
     }
 
     if (len == 0) {
-        free(res);
+        printf("WTF\n");
+        hfree(MEMORY, "res");
         return NULL;
     }
 
@@ -60,19 +67,25 @@ int run_command(array_t *args) {
 
     if (pid == 0) {
         int exec_stat = execvp(args->data[0], args->data);
+
         if (exec_stat == -1) {
+            destroy_table(MEMORY);
             errx(1, "execvp failed");
         }
+
         return 1;
     } else if (pid > 0) {
         int status;
         waitpid(pid, &status, 0);
+
         WIFEXITED(status);
         if (WEXITSTATUS(status) != 0) {
             printf("Command %s failed with status %d :(\n", args->data[0],
                    WEXITSTATUS(status));
         }
+
     } else {
+        destroy_table(MEMORY);
         errx(1, "fork failed");
     }
 }
@@ -83,17 +96,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int fd = open(argv[1], O_RDONLY);
+    MEMORY = init(100);
+
+    int fd = eopen(argv[1], O_RDONLY);
 
     char *line = readliney_optimized(fd);
+    printf("line: %s\n", line);
     while (line != NULL) {
-        printf("LINE: %s\n", line);
-
+        break;
         char **tokens = tokenizer(line);
         run_command(tokens);
+        break;
 
+        hfree(MEMORY, "res");
+        break;
         line = readliney_optimized(fd);
     }
+
+    //destroy_table(MEMORY);
 
     return 0;
 }

@@ -1,5 +1,13 @@
 #include "hashmap.h"
 
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+
+// #include "pgc.h"
+
+extern hash_table_t *MEMORY;
+
 size_t hash(char *str) {
     size_t hash = 5381;
     int c;
@@ -7,7 +15,7 @@ size_t hash(char *str) {
     char *hstr = (char *)malloc(strlen(str) + 1);
     strcpy(hstr, str);
 
-    for(int i = 0; i < strlen(hstr); i++) {
+    for (int i = 0; i < strlen(hstr); i++) {
         hash = ((hash << 5) + hash) + hstr[i];
     }
 
@@ -124,10 +132,49 @@ void *remove_pair(hash_table_t *hash_table, char *mem) {
 }
 
 void *hmalloc(hash_table_t *hash_table, char *mem, size_t size) {
+    if (contains(hash_table, mem)) {
+        return get(hash_table, mem);
+    }
+
     void *addr = malloc(size);
+    if (addr == NULL) {
+        printf("ERROR: MALLOC FAILED\n");
+        return NULL;
+    }
+
     put(hash_table, mem, addr);
     return addr;
 }
+
+void *hrealloc(hash_table_t *hash_table, char *mem, size_t size) {
+    if (!contains(hash_table, mem)) {
+        errx(ENOENT, "no such key\n");
+    }
+
+    void *addr = realloc(get(hash_table, mem), size);
+    if (addr == NULL) {
+        printf("ERROR: REALLOC FAILED\n");
+        hash_table = destroy_table(hash_table);
+        errx(ENOMEM, "realloc failed\n");
+    }
+
+    //hfree(hash_table, mem);
+    put(hash_table, mem, addr);
+    return addr;
+}
+
+/* int hopen(hash_table_t *hash_table, const char *pathname, int mode) {
+    int fd = open(pathname, mode);
+
+    if (-1 == fd) {
+        hash_table = destroy_table(hash_table);
+        err(ENOENT, "file open failed, or file doesn't exist\n");
+    }
+
+
+
+    return fd;
+} */
 
 void hfree(hash_table_t *hash_table, char *mem) {
     void *fmem = remove_pair(hash_table, mem);
@@ -152,8 +199,10 @@ hash_table_t *destroy_table(hash_table_t *hash_table) {
             temp = NULL;
         }
     }
+
     free(hash_table->buckets);
     hash_table->buckets = NULL;
+
     free(hash_table);
     hash_table = NULL;
     return hash_table;
