@@ -1,0 +1,1 @@
+grep '[24680]' file | grep '^[^a-w]*$' | wc -l
